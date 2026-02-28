@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasOnlyKeys(data, allowed) {
+      return data.keys().hasOnly(allowed);
+    }
+
+    function validMindObject(data, uid) {
+      return hasOnlyKeys(data, [
+          'uid',
+          'learning_analogies',
+          'voice_mode_enabled',
+          'created_at',
+          'updated_at'
+        ])
+        && data.uid is string
+        && data.uid == uid
+        && data.learning_analogies is list
+        && data.voice_mode_enabled is bool
+        && (!('created_at' in data) || data.created_at is timestamp)
+        && (!('updated_at' in data) || data.updated_at is timestamp);
+    }
+
+    function validLearningState(data, uid) {
+      return hasOnlyKeys(data, [
+          'uid',
+          'current_topic',
+          'deferred_topics',
+          'updated_at'
+        ])
+        && data.uid is string
+        && data.uid == uid
+        && data.current_topic is string
+        && data.deferred_topics is list
+        && (!('updated_at' in data) || data.updated_at is timestamp);
+    }
+
+    function validWeakPoint(data) {
+      return hasOnlyKeys(data, [
+          'uid',
+          'failed_concept',
+          'failure_count',
+          'status',
+          'created_at',
+          'updated_at'
+        ])
+        && data.uid is string
+        && data.uid == request.auth.uid
+        && data.failed_concept is string
+        && data.failure_count is int
+        && data.failure_count >= 0
+        && data.status in ['unresolved', 'resolved']
+        && (!('created_at' in data) || data.created_at is timestamp)
+        && (!('updated_at' in data) || data.updated_at is timestamp);
+    }
+
+    // 1) users_mind_object/{uid}
+    match /users_mind_object/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validMindObject(request.resource.data, uid);
+      allow delete: if isOwner(uid);
+    }
+
+    // 2) active_learning_state/{uid}
+    match /active_learning_state/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && validLearningState(request.resource.data, uid);
+      allow delete: if isOwner(uid);
+    }
+
+    // 3) weak_point_mixer/{weakPointId}
+    match /weak_point_mixer/{weakPointId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow create: if isSignedIn() && validWeakPoint(request.resource.data);
+      allow update: if isSignedIn()
+                    && resource.data.uid == request.auth.uid
+                    && validWeakPoint(request.resource.data);
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+  }
+}
