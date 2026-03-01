@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const { registerUser, loginUser } = require('./authController');
 const { processNguruMessage } = require('./nguruEngine');
+const { generateReelVideo } = require('./reelGenerator');
 
 const app = express();
 app.use(express.json());
@@ -39,6 +40,35 @@ app.post('/api/chat', async (req, res) => {
   } catch (error) {
     console.error('Error in Nguru Engine:', error);
     res.status(500).json({ error: 'Nguru Engine encountered a critical error.' });
+  }
+});
+
+// --- SHORT-FORM VIDEO GENERATOR ROUTE ---
+app.post('/api/video/generate', async (req, res) => {
+  try {
+    const { topic, platform, durationSeconds, isVeryViral } = req.body;
+
+    if (!topic) {
+      return res.status(400).json({ error: 'Missing topic' });
+    }
+
+    const video = await generateReelVideo({
+      topic,
+      platform: platform || 'youtube',
+      durationSeconds,
+      isVeryViral: Boolean(isVeryViral)
+    });
+
+    return res.status(200).json({
+      message: 'Video generated successfully.',
+      ...video
+    });
+  } catch (error) {
+    console.error('Video generator error:', error);
+    return res.status(500).json({
+      error: 'Failed to generate video.',
+      details: error.message
+    });
   }
 });
 
