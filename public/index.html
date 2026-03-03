@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nguru AI Mentorship</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 24px; background-color: #FAFAFA; margin: 0; }
+        .container { max-width: 400px; margin: 0 auto; margin-top: 40px; }
+        h1 { color: #333; margin-bottom: 5px; }
+        p.subtitle { color: #666; margin-bottom: 30px; }
+        input { width: 100%; padding: 15px; margin-bottom: 15px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 8px; background-color: #EEEEEE; font-size: 16px; }
+        .analogies-title { font-weight: bold; margin-bottom: 10px; color: #333; }
+        .analogies-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+        button { width: 100%; padding: 18px; background-color: #6200EE; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 8px; }
+        #statusMessage { margin-top: 15px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Nguru</h1>
+        <p class="subtitle">Let's build your mind object.</p>
+
+        <input type="email" id="emailInput" placeholder="Email Address">
+        <input type="password" id="passwordInput" placeholder="Password">
+
+        <div class="analogies-title">What makes sense to you?</div>
+        <div class="analogies-grid">
+            <label><input type="checkbox" value="Football"> Football</label>
+            <label><input type="checkbox" value="Street Business"> Street Business</label>
+            <label><input type="checkbox" value="Crypto"> Crypto</label>
+            <label><input type="checkbox" value="Music Production"> Music Production</label>
+        </div>
+
+        <button onclick="registerUser()">Enter Nguru</button>
+        <p id="statusMessage"></p>
+    </div>
+
+    <script>
+        async function registerUser() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            const statusText = document.getElementById('statusMessage');
+
+            if (!email || !password) {
+                statusText.style.color = "red";
+                statusText.innerText = "Please enter an email and password.";
+                return;
+            }
+
+            statusText.style.color = "#666";
+            statusText.innerText = "Connecting to Nguru Engine...";
+
+            try {
+                // Notice how clean this is! It just talks directly to its own server.
+                const response = await fetch("/api/auth/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: email, password: password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusText.style.color = "green";
+                    statusText.innerText = "Mind Object Created! Welcome.";
+                    localStorage.setItem("nguru_userId", data.userId);
+                } else {
+                    statusText.style.color = "red";
+                    statusText.innerText = "Error: " + (data.error || "Could not connect.");
+                }
+            } catch (error) {
+                statusText.style.color = "red";
+                statusText.innerText = "Server error.";
+            }
+        }
+    </script>
+</body>
+</html>
