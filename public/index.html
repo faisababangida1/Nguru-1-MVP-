@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nguru | Enter the Engine</title>
+    <style>
+        :root { --bg-main: #121212; --bg-card: #1E1E1E; --text-main: #FFFFFF; --text-muted: #A0A0A0; --brand: #6200EE; --brand-hover: #7E3FF2; --input-bg: #2C2C2C; }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: var(--bg-main); color: var(--text-main); display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        
+        .container { background: var(--bg-card); padding: 40px; border-radius: 16px; width: 90%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; text-align: center; }
+        
+        .logo { font-size: 28px; font-weight: 800; letter-spacing: 1px; margin-bottom: 10px; color: var(--text-main); }
+        .logo span { color: var(--brand); }
+        .tagline { font-size: 14px; color: var(--text-muted); margin-bottom: 30px; }
+
+        .toggle-box { display: flex; background: var(--input-bg); border-radius: 8px; margin-bottom: 25px; padding: 4px; }
+        .toggle-btn { flex: 1; padding: 10px; background: transparent; border: none; color: var(--text-muted); font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.3s; }
+        .toggle-btn.active { background: var(--bg-card); color: var(--text-main); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group input { width: 100%; padding: 14px; background: var(--input-bg); border: 1px solid #3E3E3E; border-radius: 8px; color: white; font-size: 15px; outline: none; transition: border 0.3s; }
+        .form-group input:focus { border-color: var(--brand); }
+
+        .action-btn { width: 100%; padding: 15px; background: var(--brand); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.3s, transform 0.1s; }
+        .action-btn:hover { background: var(--brand-hover); }
+        .action-btn:active { transform: scale(0.98); }
+
+        #error-msg { color: #FF3B30; font-size: 13px; margin-top: 15px; display: none; }
+        
+        #wizard-section { display: none; }
+        #auth-section { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="logo">Ngu<span>ru</span></div>
+        <div class="tagline">The Relational Mastery Engine</div>
+
+        <div id="auth-section">
+            <div class="toggle-box">
+                <button class="toggle-btn active" id="btn-login" onclick="switchTab('login')">Log In</button>
+                <button class="toggle-btn" id="btn-register" onclick="switchTab('register')">Sign Up</button>
+            </div>
+
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="you@example.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <button class="action-btn" id="submit-btn" onclick="handleAuth()">Enter Engine</button>
+            <div id="error-msg">Authentication failed.</div>
+        </div>
+
+        <div id="wizard-section">
+            <h3 style="margin-bottom: 10px;">Customize Your Brain</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">What analogies help you learn best? (e.g., Football, Coding)</p>
+            
+            <div class="form-group">
+                <label>Interest 1 (Required)</label>
+                <input type="text" id="interest-1" placeholder="e.g. Football" required>
+            </div>
+            <div class="form-group">
+                <label>Interest 2 (Optional)</label>
+                <input type="text" id="interest-2" placeholder="e.g. Music Production">
+            </div>
+
+            <button class="action-btn" id="wizard-btn" onclick="finishWizard()">Start Mentorship</button>
+        </div>
+
+    </div>
+
+    <script>
+        let isLogin = true;
+
+        if (localStorage.getItem("nguru_userId")) {
+            window.location.href = "/chat.html";
+        }
+
+        function switchTab(tab) {
+            isLogin = (tab === 'login');
+            document.getElementById('btn-login').className = isLogin ? 'toggle-btn active' : 'toggle-btn';
+            document.getElementById('btn-register').className = !isLogin ? 'toggle-btn active' : 'toggle-btn';
+            document.getElementById('submit-btn').innerText = isLogin ? 'Enter Engine' : 'Create Account';
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        function showError(msg) {
+            const errDiv = document.getElementById('error-msg');
+            errDiv.innerText = msg;
+            errDiv.style.display = 'block';
+        }
+
+        async function handleAuth() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const btn = document.getElementById('submit-btn');
+
+            if (!email || !password) {
+                showError("Please fill in all fields.");
+                return;
+            }
+
+            btn.innerText = "Processing...";
+            btn.disabled = true;
+
+            const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem("nguru_userId", data.user?.id || data.userId);
+                    
+                    if (!isLogin) {
+                        document.getElementById('auth-section').style.display = 'none';
+                        document.getElementById('wizard-section').style.display = 'block';
+                    } else {
+                        window.location.href = "/chat.html";
+                    }
+                } else {
+                    showError(data.error || "Authentication failed.");
+                    btn.innerText = isLogin ? 'Enter Engine' : 'Create Account';
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                showError("Server disconnected.");
+                btn.innerText = isLogin ? 'Enter Engine' : 'Create Account';
+                btn.disabled = false;
+            }
+        }
+
+        // --- NEW: WIZARD DATA CAPTURE ---
+        async function finishWizard() {
+            const int1 = document.getElementById('interest-1').value.trim();
+            const int2 = document.getElementById('interest-2').value.trim();
+            const userId = localStorage.getItem("nguru_userId");
+            const btn = document.getElementById('wizard-btn');
+
+            if (!int1) {
+                alert("Please enter at least one interest to customize your engine.");
+                return;
+            }
+
+            btn.innerText = "Configuring AI...";
+            btn.disabled = true;
+
+            const interests = [int1];
+            if (int2) interests.push(int2);
+
+            try {
+                await fetch('/api/user/interests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userId, interests: interests })
+                });
+                // Once saved successfully, drop them into the chat!
+                window.location.href = "/chat.html";
+            } catch (error) {
+                console.error(error);
+                // If it fails, let them through anyway so they don't get stuck
+                window.location.href = "/chat.html";
+            }
+        }
+    </script>
+</body>
+</html>
