@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Nguru AI</title>
+    <style>
+        :root { --bg-main: #212121; --bg-sidebar: #171717; --bg-input: #2F2F2F; --text-main: #ECECEC; --text-muted: #9E9E9E; --brand: #6200EE; --brand-hover: #7E3FF2; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: var(--bg-main); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
+        
+        .sidebar { width: 280px; background: var(--bg-sidebar); display: flex; flex-direction: column; position: absolute; height: 100%; z-index: 1000; transform: translateX(-100%); transition: 0.3s; border-right: 1px solid #333; }
+        .sidebar.open { transform: translateX(0); }
+        .sidebar-header { padding: 20px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid #333; }
+        .new-chat-btn { background: var(--brand); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; flex: 1; font-weight: bold; }
+        .close-sidebar { background: none; border: none; color: var(--text-muted); font-size: 28px; cursor: pointer; }
+        
+        .history-list { flex: 1; overflow-y: auto; padding: 15px 10px; display: flex; flex-direction: column; gap: 8px; }
+        .history-item { display: flex; justify-content: space-between; padding: 12px; border-radius: 8px; cursor: pointer; }
+        .history-item:hover, .history-item.active { background: #2A2A2A; }
+        .session-title { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .session-actions { display: none; gap: 5px; }
+        .history-item:hover .session-actions, .history-item.active .session-actions { display: flex; }
+        .action-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); }
+        
+        .sidebar-footer { padding: 15px; border-top: 1px solid #333; }
+        .settings-btn { width: 100%; background: #2A2A2A; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+        .main-area { flex: 1; display: flex; flex-direction: column; width: 100%; position: relative; }
+        .header { background: rgba(33, 33, 33, 0.9); padding: 15px 20px; display: flex; align-items: center; position: absolute; top: 0; width: 100%; z-index: 10; border-bottom: 1px solid #333; }
+        .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; margin-right: 15px; }
+        
+        .chat-container { flex: 1; padding: 80px 20px 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+        .message { max-width: 85%; padding: 14px 18px; border-radius: 16px; font-size: 15px; line-height: 1.5; }
+        .message.user { align-self: flex-end; background: var(--brand); border-bottom-right-radius: 4px; }
+        .message.ai { align-self: flex-start; background: #2A2A2A; border: 1px solid #333; border-bottom-left-radius: 4px; }
+        
+        .input-area { padding: 15px 20px; background: var(--bg-main); border-top: 1px solid #333; display: flex; gap: 10px; align-items: center; }
+        .input-wrapper { flex: 1; display: flex; background: var(--bg-input); border-radius: 24px; padding: 5px 15px; border: 1px solid #444; }
+        input[type="text"] { flex: 1; background: none; border: none; color: white; outline: none; padding: 10px 0; }
+        
+        #micBtn { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted); transition: 0.3s; }
+        #micBtn.recording { color: #FF3B30; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+        
+        .sendBtn { background: var(--brand); color: white; border: none; border-radius: 50%; width: 45px; height: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        /* MODALS */
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); padding: 25px; border-radius: 12px; width: 90%; max-width: 350px; z-index: 1001; border: 1px solid #444; }
+        .modal input { width: 100%; padding: 12px; background: var(--bg-input); border: 1px solid #444; color: white; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box; }
+        .modal label { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; display: block; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .modal-buttons button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-save { background: var(--brand); color: white; }
+        .btn-cancel { background: #444; color: white; }
+        .btn-logout { background: transparent; color: #FF3B30; border: 1px solid #FF3B30 !important; margin-top: 15px; width: 100%; }
+        
+        .video-container { margin-top: 15px; border-radius: 12px; overflow: hidden; }
+    </style>
+</head>
+<body>
+
+    <div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" onclick="startNewChat()">+ New Chat</button>
+            <button class="close-sidebar" onclick="closeAll()">×</button>
+        </div>
+        <div class="history-list" id="history-list"></div>
+        <div class="sidebar-footer">
+            <button class="settings-btn" onclick="openSettings()">⚙️ Settings & Profile</button>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <h3 style="margin-top:0;">Profile Settings</h3>
+        <label>Display Name</label>
+        <input type="text" id="prof-name" placeholder="Your Name">
+        <label>Learning Analogies (comma separated)</label>
+        <input type="text" id="prof-analogies" placeholder="Football, Coding">
+        
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeAll()">Cancel</button>
+            <button class="btn-save" onclick="saveSettings()">Save Changes</button>
+        </div>
+        <button class="btn-logout" onclick="logout()">Log Out</button>
+    </div>
+
+    <div class="main-area">
+        <div class="header">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <span style="font-weight: bold; font-size: 18px;">Nguru</span>
+        </div>
+        
+        <div class="chat-container" id="chat-box"></div>
+        
+        <div class="input-area">
+            <div class="input-wrapper">
+                <input type="text" id="userInput" placeholder="Ask Nguru anything..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button id="micBtn" onclick="toggleVoice()">🎤</button>
+            </div>
+            <button class="sendBtn" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+
+    <script>
+        const userId = localStorage.getItem("nguru_userId");
+        if (!userId) window.location.href = "/";
+        let currentSessionId = null;
+
+        function closeAll() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('settingsModal').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function logout() {
+            localStorage.removeItem("nguru_userId");
+            window.location.href = "/";
+        }
+
+        // --- PROFILE SETTINGS ---
+        async function openSettings() {
+            closeAll();
+            document.getElementById('settingsModal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            try {
+                const res = await fetch(`/api/user/profile/${userId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('prof-name').value = data.name || '';
+                    document.getElementById('prof-analogies').value = data.analogies.join(', ') || '';
+                }
+            } catch (e) {}
+        }
+
+        async function saveSettings() {
+            const name = document.getElementById('prof-name').value.trim();
+            const analogiesStr = document.getElementById('prof-analogies').value.trim();
+            const analogies = analogiesStr ? analogiesStr.split(',').map(s => s.trim()) : [];
+            
+            try {
+                await fetch(`/api/user/profile/${userId}`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, analogies })
+                });
+                closeAll();
+            } catch (e) { alert("Failed to save."); }
+        }
+
+        // --- HISTORY & SESSIONS ---
+        function startNewChat() {
+            currentSessionId = null;
+            document.getElementById('chat-box').innerHTML = '';
+            closeAll(); loadSessions();
+        }
+
+        async function loadSessions() {
+            try {
+                const res = await fetch(`/api/chat/sessions/${userId}`);
+                if (res.ok) {
+                    const sessions = await res.json();
+                    const list = document.getElementById('history-list');
+                    list.innerHTML = '';
+                    sessions.forEach(s => {
+                        list.innerHTML += `
+                            <div class="history-item ${s.id === currentSessionId ? 'active' : ''}" onclick="loadHistory(${s.id})">
+                                <div class="session-title">${s.title}</div>
+                                <div class="session-actions">
+                                    <button class="action-btn" onclick="rename(${s.id}, '${s.title}', event)">✏️</button>
+                                    <button class="action-btn" onclick="delSession(${s.id}, event)">🗑️</button>
+                                </div>
+                            </div>`;
+                    });
+                }
+            } catch (e) {}
+        }
+
+        async function rename(id, oldTitle, e) {
+            e.stopPropagation();
+            const newTitle = prompt("Rename:", oldTitle);
+            if (newTitle && newTitle !== oldTitle) {
+                await fetch(`/api/chat/sessions/${id}`, { method: 'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title: newTitle}) });
+                loadSessions();
+            }
+        }
+
+        async function delSession(id, e) {
+            e.stopPropagation();
+            if (confirm("Delete this chat?")) {
+                await fetch(`/api/chat/sessions/${id}`, { method: 'DELETE' });
+                if (currentSessionId === id) startNewChat(); else loadSessions();
+            }
+        }
+
+        async function loadHistory(id) {
+            currentSessionId = id; closeAll();
+            document.getElementById('chat-box').innerHTML = '';
+            const res = await fetch(`/api/chat/history/${id}`);
+            if (res.ok) {
+                const hist = await res.json();
+                hist.forEach(m => appendMsg(m.role, m.message, null, false));
+            }
+            loadSessions();
+        }
+
+        // --- VOICE ENGINE (INTERRUPTIBLE) ---
+        let recognition;
+        let isRecording = false;
+
+        if (window.SpeechRecognition || window.webkitSpeechRecognition) {
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = false;
+            recognition.onresult = (e) => {
+                document.getElementById('userInput').value = e.results[0][0].transcript;
+                sendMessage();
+            };
+            recognition.onend = () => {
+                isRecording = false;
+                document.getElementById('micBtn').classList.remove('recording');
+            };
+        }
+
+        function toggleVoice() {
+            // INTERRUPT THE AI IMMEDIATELY
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            
+            if (!recognition) return alert("Voice not supported on this browser.");
+            
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+                isRecording = true;
+                document.getElementById('micBtn').classList.add('recording');
+            }
+        }
+
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop anything currently playing
+                const utterance = new SpeechSynthesisUtterance(text.replace(/<[^>]+>/g, '').replace(/\\*/g, ''));
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- CHAT LOGIC ---
+        function appendMsg(role, text, videoId = null, playAudio = true) {
+            const box = document.getElementById('chat-box');
+            let content = `<div>${text.replace(/\\n/g, '<br>')}</div>`;
+            if (videoId) content += `<div class="video-container"><iframe width="100%" height="215" src="https://www.youtube.com/embed/${videoId}?autoplay=0" frameborder="0"></iframe></div>`;
+            
+            box.innerHTML += `<div class="message ${role}">${content}</div>`;
+            box.scrollTop = box.scrollHeight;
+            if (role === 'ai' && playAudio) speakText(text);
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Stop AI voice if user sends a new message manually
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+            appendMsg('user', text, null, false);
+            input.value = '';
+            
+            const box = document.getElementById('chat-box');
+            box.innerHTML += `<div class="message ai" id="loading">...</div>`;
+            box.scrollTop = box.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId, sessionId: currentSessionId, message: text })
+                });
+                document.getElementById('loading').remove();
+                if (res.ok) {
+                    const data = await res.json();
+                    appendMsg('ai', data.ai_response_text, data.video_id, true);
+                    if (!currentSessionId) { currentSessionId = data.session_id; loadSessions(); }
+                }
+            } catch (e) {
+                document.getElementById('loading').remove();
+                appendMsg('ai', 'Error connecting to engine.', null, false);
+            }
+        }
+
+        loadSessions(); startNewChat();
+    </script>
+</body>
+</html>
