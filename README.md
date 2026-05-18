@@ -1,5 +1,24 @@
-# Nguru-1-MVP-
-The backend and login.
+# Rentra / Nguru MVP
+
+A modern real-estate and rental discovery platform focused on helping people find houses, apartments, hostels, and affordable living spaces faster and smarter.
+
+## Vision
+
+To build a platform where anyone can easily:
+- Discover properties
+- Connect with landlords
+- Upload listings
+- Chat directly
+- Explore homes based on budget and lifestyle
+
+## Features
+
+- Modern property feed
+- Property upload system
+- Messaging system
+- Smart search and filtering
+- User profiles
+- Responsive mobile-first UI
 
 ## API Endpoints
 
@@ -7,47 +26,31 @@ The backend and login.
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 
-### Nguru chat
+### Chat
 - `POST /api/chat`
 
-### Short-form video generator
+### Video Generator
 - `POST /api/video/generate`
 
-Generate a ready-to-publish vertical video for YouTube Shorts or TikTok.
+## Tech Stack
 
-#### Request body
-```json
-{
-  "topic": "High-protein diet for fat loss",
-  "platform": "tiktok",
-  "durationSeconds": 60,
-  "isVeryViral": false
-}
-```
+Frontend:
+- React / Next.js
+- Tailwind CSS
 
-#### Behavior
-- Generates a full MP4 video with 1080x1920 format.
-- Adds scene captions, hook, and outro text overlays.
-- Produces audio track for the full duration.
-- Uses 60 seconds by default.
-- If `isVeryViral` is true, duration can expand up to 90 seconds.
+Backend:
+- Node.js
+- Express
+- Firebase or Supabase
 
-#### Response (example)
-```json
-{
-  "message": "Video generated successfully.",
-  "outputVideoPath": "/workspace/Nguru-1-MVP-/generated-videos/tiktok-High_protein_diet_for_fat_loss-12345678.mp4",
-  "outputStoryboardPath": "/workspace/Nguru-1-MVP-/generated-videos/tiktok-High_protein_diet_for_fat_loss-12345678.json",
-  "durationSeconds": 60,
-  "storyboard": {
-    "title": "Viral diet reel",
-    "hook": "...",
-    "scenes": [
-      { "caption": "...", "voiceover": "...", "mood": "energetic" }
-    ],
-    "outro": "..."
-  }
-}
-```
+## Future Goals
 
-> Note: video rendering requires `ffmpeg` to be installed in the runtime environment.
+- AI property recommendations
+- Voice search
+- Virtual tours
+- Secure payment integration
+- Agent verification system
+
+---
+
+Built by Faisal Babangida.
